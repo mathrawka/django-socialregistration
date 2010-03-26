@@ -25,7 +25,7 @@ if getattr(settings, 'FACEBOOK_API_KEY', None) is not None:
         url('^facebook/connect/$', 'socialregistration.views.facebook_connect',
             name='facebook_connect'),
 
-        url('^xd_receiver.htm', 'django.views.generic.simple.direct_to_template',
+        url('^facebook/connect/xd_receiver.htm', 'django.views.generic.simple.direct_to_template',
             {'template':'socialregistration/xd_receiver.html'},
             name='facebook_xd_receiver'),
     )
