@@ -41,6 +41,47 @@ def _get_next(request):
     else:
         return getattr(settings, 'LOGIN_REDIRECT_URL', '/')
 
+def _generate_user(request, user, profile, username=None, email=None,
+    first_name=None, last_name=None):
+    """
+    Auto generate a user based on the parameters
+    """
+    if GENERATE_USERNAME:
+        # Generate username
+        if username:
+          try_username = username
+          try:
+            i = 1
+            while True:
+              User.objects.get(username=try_username)
+              num_str = str(i)
+              max_username = 29 - len(num_str)
+              try_username = username[:max_username]+'-'+num_str
+              i += 1
+          except User.DoesNotExist:
+            user.username = try_username
+        else:
+            user.username = str(uuid.uuid4())[:30]
+        user.email = email
+        user.first_name = first_name
+        user.last_name = last_name
+        user.save()
+
+        profile.user = user
+        profile.save()
+
+        # Authenticate and login
+        user = profile.authenticate()
+        login(request, user)
+
+        return HttpResponseRedirect(_get_next(request))
+    else:
+        request.session['socialregistration_user'] = user
+        request.session['socialregistration_profile'] = profile
+        request.session['next'] = _get_next(request)
+        return HttpResponseRedirect(reverse('socialregistration_setup'))
+
+
 def setup(request, template='socialregistration/setup.html',
     form_class=UserForm, extra_context=dict()):
     """
@@ -77,18 +118,8 @@ def setup(request, template='socialregistration/setup.html',
             context_instance=RequestContext(request)
         )
     else:
-        # Generate user and profile
-        user = request.session['socialregistration_user']
-        user.username = str(uuid.uuid4())[:30]
-        user.save()
-
-        profile = request.session['socialregistration_profile']
-        profile.user = user
-        profile.save()
-
-        # Authenticate and login
-        user = profile.authenticate()
-        login(request, user)
+        _generate_user(request, request.session['socialregistration_user'],
+            request.session['socialregistration_profile'])
 
         # Clear & Redirect
         del request.session['socialregistration_user']
@@ -112,14 +143,17 @@ def facebook_login(request, template='socialregistration/facebook.html',
     user = authenticate(uid=str(request.facebook.uid))
 
     if user is None:
-        request.session['socialregistration_user'] = User()
-        fb_profile = request.facebook.users.getInfo([request.facebook.uid], ['name', 'pic_square'])[0]
-        request.session['socialregistration_profile'] = FacebookProfile(
+        user = User()
+        fb_profile = request.facebook.users.getInfo([request.facebook.uid], ['name', 'pic_square', 'email', 'first_name', 'last_name'])[0]
+        profile = FacebookProfile(
             uid=request.facebook.uid,
+            name=fb_profile['name'],
+            pic_url=fb_profile['pic_square']
             )
-        request.session['next'] = _get_next(request)
 
-        return HttpResponseRedirect(reverse('socialregistration_setup'))
+        return _generate_user(request, user, profile, username=fb_profile['name'],
+            first_name=fb_profile['first_name'], last_name=fb_profile['last_name'],
+            email=fb_profile['email'])
 
     if not user.is_active:
         return render_to_response(
@@ -153,7 +187,6 @@ def facebook_connect(request, template='socialregistration/facebook.html',
     except FacebookProfile.DoesNotExist:
         profile = FacebookProfile.objects.create(user=request.user,
             uid=request.facebook.uid)
-
 
     return HttpResponseRedirect(_get_next(request))
 
