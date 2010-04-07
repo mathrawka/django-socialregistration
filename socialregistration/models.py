@@ -26,6 +26,8 @@ class TwitterProfile(models.Model):
     user = models.ForeignKey(User)
     site = models.ForeignKey(Site, default=Site.objects.get_current)
     twitter_id = models.PositiveIntegerField()
+    pic_url = models.CharField(max_length=1024, null=True)
+    name = models.CharField(max_length=255, null=True)
     
     def __unicode__(self):
         return u'%s: %s' % (self.user, self.twitter_id)
