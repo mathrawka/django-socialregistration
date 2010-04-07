@@ -231,10 +231,9 @@ def twitter(request, account_inactive_template='socialregistration/account_inact
     if user is None:
         profile = TwitterProfile(twitter_id=user_info['id'])
         user = User()
-        request.session['socialregistration_profile'] = profile
-        request.session['socialregistration_user'] = user
-        request.session['next'] = _get_next(request)
-        return HttpResponseRedirect(reverse('socialregistration_setup'))
+        return _generate_user(request, user, profile, username=user_info['screen_name'],
+            first_name=user_info['name'], last_name='',
+            email='')
 
     if not user.is_active:
         return render_to_response(
