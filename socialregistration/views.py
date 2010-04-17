@@ -63,8 +63,8 @@ def _generate_user(request, user, profile, username=None, email=None,
         else:
             user.username = str(uuid.uuid4())[:30]
         user.email = email
-        user.first_name = first_name
-        user.last_name = last_name
+        user.first_name = first_name[:30]
+        user.last_name = last_name[:30]
         user.save()
 
         profile.user = user
