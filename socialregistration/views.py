@@ -151,9 +151,13 @@ def facebook_login(request, template='socialregistration/facebook.html',
             pic_url=fb_profile['pic_square']
             )
 
+        if 'email' in fb_profile:
+          email = fb_profile['email']
+        else:
+          email = ''
         return _generate_user(request, user, profile, username=fb_profile['name'],
             first_name=fb_profile['first_name'], last_name=fb_profile['last_name'],
-            email=fb_profile['email'])
+            email=email)
 
     if not user.is_active:
         return render_to_response(
